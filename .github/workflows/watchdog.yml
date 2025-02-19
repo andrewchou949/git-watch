@@ -1,0 +1,15 @@
+# create a blank yml file that does nothing at all
+name: Watchdog
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+        - name: Do nothing
+          run: echo "Doing nothing"
