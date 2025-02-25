@@ -13,3 +13,7 @@ GitHub API error: 401 Client Error: Unauthorized for url: https://api.github.com
 GitHub API error: 401 Client Error: Unauthorized for url: https://api.github.com/repos/andrewchou949/Personal-Finance-Management-Application/pulls?state=closed&sort=updated&direction=desc
 No merge detected on branch andrew/test-branch.
 Merge detected on branch main!
+Failed to get events from GitHub API: 401
+Merge detected on branch main!
+Merge detected on branch main!
+Merge detected on branch main!

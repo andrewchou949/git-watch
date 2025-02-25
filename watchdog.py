@@ -8,9 +8,7 @@ Date Created: 02/10/2025
 
 Dependencies:
 - requests: HTTP library for making HTTP requests.
-- time: for setting interval (not being used yet!)
 - logging: for logging error or event messages (save to app.log)
-- dotenv: library for loading env variable.
 - slack_sdk: tool for connecting python script to slack channel
 """
 
@@ -41,10 +39,12 @@ logger.setLevel(logging.INFO)
 # client = WebClient(token=slack_token)
 
 # github repo setup
-GITHUB_OWNER = "andrewchou949"
-GITHUB_REPO = "Personal-Finance-Management-Application"
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+GITHUB_OWNER = "247teach"
+GITHUB_REPO = "naomi-nextjs-app"
+GITHUB_TOKEN = os.environ.get("NAOMI_GITHUB_TOKEN")
 MERGE_FILE = "merge_log.txt" # to prevent repetitive merge alert
+last_merge_pr = None # to be used to detect if notif is made yet
+
 
 # github api setup
 HEADERS = {
@@ -52,56 +52,56 @@ HEADERS = {
     "Accept": "application/vnd.github.v3+json"
 }
 
-# for testing github api for the first time
-def get_recent_events():
-    url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/pulls?state=closed&sort=updated&direction=desc"
+# # for testing github api for the first time
+# def get_recent_events():
+#     url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/pulls?state=closed&sort=updated&direction=desc"
     
-    try:
-        response = requests.get(url, headers=HEADERS)
-        response.raise_for_status()  # Raise an error if the request fails
+#     try:
+#         response = requests.get(url, headers=HEADERS)
+#         response.raise_for_status()  # Raise an error if the request fails
 
-        # Debug: Print response headers
-        print("Response Headers:", response.headers)
+#         # Debug: Print response headers
+#         print("Response Headers:", response.headers)
         
-        pulls = response.json()
+#         pulls = response.json()
 
-        # Debug: Check if the response is empty
-        if not pulls:
-            logger.info("No closed pull requests found.")
-            print("No closed PRs found. Full Response:", response.text)
-            return "No closed PRs found."
+#         # Debug: Check if the response is empty
+#         if not pulls:
+#             logger.info("No closed pull requests found.")
+#             print("No closed PRs found. Full Response:", response.text)
+#             return "No closed PRs found."
 
-        # Debugging: Print the raw API response
-        print("Raw API Response (First PR):", pulls[0] if pulls else "No PRs")
+#         # Debugging: Print the raw API response
+#         print("Raw API Response (First PR):", pulls[0] if pulls else "No PRs")
 
-        # Filter only merged PRs
-        merged_pulls = [pr for pr in pulls if pr.get("merged_at")]
+#         # Filter only merged PRs
+#         merged_pulls = [pr for pr in pulls if pr.get("merged_at")]
 
-        if not merged_pulls:
-            logger.info("No merged pull requests found.")
-            print("No merged PRs found.")
-            return "No merged PRs found."
+#         if not merged_pulls:
+#             logger.info("No merged pull requests found.")
+#             print("No merged PRs found.")
+#             return "No merged PRs found."
 
-        # Print first 5 merged PRs
-        for i, pr in enumerate(merged_pulls[:5]):
-            title = pr.get("title", "Unknown Title")
-            created_at = pr.get("created_at", "Unknown Date")
-            user = pr.get("user", {}).get("login", "Unknown User")
-            merged_at = pr.get("merged_at", "Unknown Date")
+#         # Print first 5 merged PRs
+#         for i, pr in enumerate(merged_pulls[:5]):
+#             title = pr.get("title", "Unknown Title")
+#             created_at = pr.get("created_at", "Unknown Date")
+#             user = pr.get("user", {}).get("login", "Unknown User")
+#             merged_at = pr.get("merged_at", "Unknown Date")
 
-            print(f"{i+1}. Merged PR: {title} | User: {user} | Created: {created_at} | Merged: {merged_at}")
+#             print(f"{i+1}. Merged PR: {title} | User: {user} | Created: {created_at} | Merged: {merged_at}")
 
-        return merged_pulls[:5]  # Return first 5 merged PRs
+#         return merged_pulls[:5]  # Return first 5 merged PRs
     
-    except requests.exceptions.RequestException as e:
-        logger.error(f"GitHub API error: {e}")
-        print(f"GitHub API error: {e}")
-        return None
-
+#     except requests.exceptions.RequestException as e:
+#         logger.error(f"GitHub API error: {e}")
+#         print(f"GitHub API error: {e}")
+#         return None
 
 # will use github api directly to perform get request for all git events
 # return boolean to detect if merge event found!
 def detect_merge(branch):
+    global last_merge_pr # declare global variable
     # setup url
     # this will detect both merged and unmerged activity on the repo in questions
     url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/pulls?state=closed&sort=updated&direction=desc"
@@ -114,38 +114,65 @@ def detect_merge(branch):
     pulls = response.json()
     
     for pr in pulls:
+        pr_number = str(pr.get("number"))
+        merged = pr.get("merged_at")
+        base_branch = pr.get("base", {}).get("ref")
         # Check if the PR is merged
         # and must be on the branch I'm monitoring
-        if pr.get("merged_at") and pr.get("base", {}).get("ref") == branch:
+        if merged and base_branch == branch:
             logger.info(f"Merge detected on branch {branch}!")
-            print(f"Merge detected on branch {branch}!")
+            last_merge_pr = pr_number
             return True
     logger.info(f"No merge detected on branch {branch}.")
-    print(f"No merge detected on branch {branch}.")
+    # print(f"No merge detected on branch {branch}.")
     return False
 
+# return back boolean to tell if notification should be sent
+def detect_notif():
+    global last_merge_pr
+    # prevent calling this function before detect_merge
+    if not last_merge_pr:
+        logger.info("No merge PR detected yet!")
+        return False
+    
+    # read merge log file first
+    if os.path.exists(MERGE_FILE):
+        with open(MERGE_FILE, "r") as f:
+            notified_pr = f.read().splitlines()
+    else:
+        notified_pr = []
+    
+    # check if current merge pr is in log file yet?
+    if last_merge_pr in notified_pr:
+        logger.info(f"PR #{last_merge_pr} already been notified!")
+        return False
 
-# # once getting the trigger status --> send notification to slack directly
-# # using trigger to detect notif action
-# def send_notif(branch, trigger):
-#     try:
-#         # For sending alert both working and non working status
-#         message = ""
-#         if trigger:
-#             message = f"<!channel> ‼️ Merge actions are detected, Please make sure to perform git pull on the branch {branch} before proceeding with any updates."
-#         # else:
-#         #     message = f"<!channel> No merge detected!"
-#         client.chat_postMessage(channel=slack_channel_id, text=message)
-#         logger.info(f"Sent alert to Slack: {message}")
-#     except SlackApiError as e:
-#         logger.error(f"Error to post message to Slack channel {slack_channel_id}: {e.response['error']}")
+    # at this point, pr are newly merged --> send notif
+    # add current pr to log file again
+    with open(MERGE_FILE, "a") as f:
+        f.write(last_merge_pr + "\n")
+    # send_notif(last_merge_pr)
+    return True # notification can be sent!
+
+# once getting the trigger status --> send notification to slack directly
+# using trigger to detect notif action
+def send_notif(branch):
+    try:
+        # For sending alert both working and non working status
+        message = ""
+        if trigger:
+            message = f"<!channel> ‼️ Merge actions are detected, Please make sure to perform git pull on the branch {branch} before proceeding with any updates."
+        # else:
+        #     message = f"<!channel> No merge detected!"
+        client.chat_postMessage(channel=slack_channel_id, text=message)
+        logger.info(f"Sent alert to Slack: {message}")
+    except SlackApiError as e:
+        logger.error(f"Error to post message to Slack channel {slack_channel_id}: {e.response['error']}")
         
         
 # main function to run the script
 if __name__ == "__main__":
-    # get recent events
-    events = detect_merge("main")
-    if events:
-        print("Events found!")
-    else:
-        print("Failed! No events found.")
+    # detect merge first
+    detect_merge("main")
+    # detect notification first then send notification when True
+    detect_notif()
