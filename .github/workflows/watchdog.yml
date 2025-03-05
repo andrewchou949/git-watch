@@ -44,3 +44,10 @@ jobs:
         SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
         SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
       run: python watchdog.py
+
+    # Save merge_log.txt after the script runs
+    - name: Save merge_log.txt
+      uses: actions/upload-artifact@v3
+      with:
+        name: merge-log
+        path: merge_log.txt
