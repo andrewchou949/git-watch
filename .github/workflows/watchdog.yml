@@ -47,6 +47,7 @@ jobs:
 
     # Save merge_log.txt after the script runs
     - name: Save merge_log.txt
+      if: always()
       uses: actions/upload-artifact@v3
       with:
         name: merge-log
