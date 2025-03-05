@@ -20,6 +20,13 @@ jobs:
     # retrieve code from repository (giving access to yml)
     - name: Checkout code
       uses: actions/checkout@v2
+    # Restore merge_log.txt from the previous run (if it exists)
+    # so the previous log is retained back instead of doing clean state run everytime
+    - name: Restore merge_log.txt
+      uses: actions/download-artifact@v3
+      with:
+        name: merge-log
+        path: .
     # install python with prebuilt setup from github actions
     - name: Set up Python 3.10
       uses: actions/setup-python@v2
