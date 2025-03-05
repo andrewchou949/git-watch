@@ -23,6 +23,7 @@ jobs:
     # Restore merge_log.txt from the previous run (if it exists)
     # so the previous log is retained back instead of doing clean state run everytime
     - name: Restore merge_log.txt
+      continue-on-error: true
       uses: actions/download-artifact@v4
       with:
         name: merge-log

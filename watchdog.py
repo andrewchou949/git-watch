@@ -103,6 +103,12 @@ HEADERS = {
 def detect_merge(branch):
     global last_merge_pr # declare global variable
     global pr_link
+    
+    # create merge log if not exist!
+    if not os.path.exists(MERGE_FILE):
+        with open(MERGE_FILE, "w") as f:
+            f.write("")
+        
     # setup url
     # this will detect both merged and unmerged activity on the repo in questions
     url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/pulls?state=closed&sort=updated&direction=desc"
