@@ -17,3 +17,16 @@ Failed to get events from GitHub API: 401
 Merge detected on branch main!
 Merge detected on branch main!
 Merge detected on branch main!
+Merge detected on branch main!
+Sent alert to Slack: <!channel> ‼️ Merge action on pull request `#94` on `main` branch are detected! Please perform a `git pull` before making any further updates.
+Merge detected on branch main!
+Sent alert to Slack: <!channel> ‼️ Pull request `#94` has been merged into the `main` branch. Please run `git pull` before making further updates to ensure your local repository is up to date
+Merge detected on branch main!
+Sent alert to Slack: <!channel> Pull request `#94` has been merged into the `main` branch. Please run `git pull` before making further updates to ensure your local repository is up to date
+Merge detected on branch main!
+PR #94 already been notified!
+No new merge detected. Notification not sent.
+Merge detected on branch main!
+Sent alert to Slack: <!channel> Pull request `#94 (https://github.com/247teach/naomi-nextjs-app/pull/94)` has been merged into the `main` branch. Please run `git pull` before making further updates to ensure your local repository is up to date
+Merge detected on branch main!
+Sent alert to Slack: <!channel> Pull request `#94` (https://github.com/247teach/naomi-nextjs-app/pull/94) has been merged into the `main` branch. Please run `git pull` before making further updates to ensure your local repository is up to date

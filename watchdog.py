@@ -17,8 +17,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 import os
-# from slack_sdk import WebClient
-# from slack_sdk.errors import SlackApiError
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 
 # Configure logging with rotating file handler base on size
@@ -31,12 +31,12 @@ logger = logging.getLogger(__name__)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-# # Load environment variables for slack 
-# slack_token = os.environ['SLACK_TOKEN']
-# slack_channel_id = ''
+# Load environment variables for slack 
+slack_token = os.environ['SLACK_TOKEN']
+slack_channel_id = os.environ['SLACK_CHANNEL']
 
-# # initialize slack client
-# client = WebClient(token=slack_token)
+# initialize slack client
+client = WebClient(token=slack_token)
 
 # github repo setup
 GITHUB_OWNER = "247teach"
@@ -44,7 +44,7 @@ GITHUB_REPO = "naomi-nextjs-app"
 GITHUB_TOKEN = os.environ.get("NAOMI_GITHUB_TOKEN")
 MERGE_FILE = "merge_log.txt" # to prevent repetitive merge alert
 last_merge_pr = None # to be used to detect if notif is made yet
-
+pr_link = None # to be used for pr link referencing
 
 # github api setup
 HEADERS = {
@@ -102,6 +102,7 @@ HEADERS = {
 # return boolean to detect if merge event found!
 def detect_merge(branch):
     global last_merge_pr # declare global variable
+    global pr_link
     # setup url
     # this will detect both merged and unmerged activity on the repo in questions
     url = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/pulls?state=closed&sort=updated&direction=desc"
@@ -115,6 +116,7 @@ def detect_merge(branch):
     
     for pr in pulls:
         pr_number = str(pr.get("number"))
+        pr_link = str(pr.get("html_url"))
         merged = pr.get("merged_at")
         base_branch = pr.get("base", {}).get("ref")
         # Check if the PR is merged
@@ -157,22 +159,29 @@ def detect_notif():
 # once getting the trigger status --> send notification to slack directly
 # using trigger to detect notif action
 def send_notif(branch):
+    # message = "testing slack config for git watch notification"
+    # client.chat_postMessage(channel=slack_channel_id, text=message)
+    global last_merge_pr
+    global pr_link
     try:
-        # For sending alert both working and non working status
-        message = ""
-        if trigger:
-            message = f"<!channel> ‼️ Merge actions are detected, Please make sure to perform git pull on the branch {branch} before proceeding with any updates."
-        # else:
-        #     message = f"<!channel> No merge detected!"
-        client.chat_postMessage(channel=slack_channel_id, text=message)
-        logger.info(f"Sent alert to Slack: {message}")
-    except SlackApiError as e:
-        logger.error(f"Error to post message to Slack channel {slack_channel_id}: {e.response['error']}")
+        # Check if notification should be sent
+        should_notify = detect_notif()
         
+        if should_notify:
+            # Pull request #94 has been merged into the main branch. Please run git pull before making further updates to ensure your local repository is up to date
+            message = f"<!channel> Pull request `#{last_merge_pr}` ({pr_link}) has been merged into the `{branch}` branch. Please run `git pull` before making further updates to ensure your local repository is up to date"
+            client.chat_postMessage(channel=slack_channel_id, text=message)
+            logger.info(f"Sent alert to Slack: {message}")
+        else:
+            logger.info("No new merge detected. Notification not sent.")
+    except SlackApiError as e:
+        logger.error(f"Error posting message to Slack channel {slack_channel_id}: {e.response['error']}")
+
+def run(branch):
+    detect_merge(branch)
+    send_notif(branch)
+    return   
         
 # main function to run the script
 if __name__ == "__main__":
-    # detect merge first
-    detect_merge("main")
-    # detect notification first then send notification when True
-    detect_notif()
+    run("main")

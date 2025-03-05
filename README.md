@@ -1,4 +1,4 @@
-# Polling on Naomi Endpoint
+# Git Watcher
 
 ## Overview
 This repository holds the core python code files for git watcher task on merge action on repo. planned out and created by Andrew Chou.
@@ -13,7 +13,11 @@ This repository holds the core python code files for git watcher task on merge a
 - [Others](#others)
 
 ## Features
-1. [placeholder]
+1. Using Github API to retreive the event on merge or pull requests.
+2. Using Slack API to send message to slack channel.\
+3. Send alert to Slack Channel to notify git pull action to users.
+4. Periodically Task Running through Github Actions Workflow to frequently detect merge action so users are being notified in real-time.
+5. Error Logging to app.log file for debugging purposes.
 
 ## Installation Steps
 1. Clone the repository:
@@ -41,19 +45,39 @@ This repository holds the core python code files for git watcher task on merge a
     - Place "\venv" and ".env" in it
 
 ## Setting up Slack Token
-- [placeholder]
+- Visit Slack API page at https://api.slack.com
+    - Make sure to log in to slack account
+- Click "Create New App" -> "From Scratch", then enter the details such as:
+    - Name for the App
+    - Slack workspace to add the app in
+- Add OAuth Scopes for the App:
+    - Left-hand menu, click "OAuth & Permissions"
+        - Find "Bot Token Scopes", and Add the following scopes:
+            - chat:write (to send message)
+            - chat:write.public (to mention everyone)
+        - Then scroll up to "OAuth Tokens" and click "Install App to Workspace"
+            - Click "Allow" if receiving any prompt
+**Note:** Save the "Bot User OAuth Token", and paste it to SLACK_TOKEN in .env
+- Add the bot to the channel that need to be added in:
+    - Go to the channel and in the chat box, type:
+        ```plaintext
+        /invite @YourBotName
+        ```
 
 ## Setting Task Scheduling
-- [placeholder]
+- Currently, the periodic task scheduling is being hosted on Github Actions Workflow
+    - The default setup are configured in .github/workflows/polling.yml
+        - Nothing needs to be made change to it, the current setup is to check once every 30 minutes (But there will be some delay to it)
+        - The frequency can be changed in the "cron" portion in the yml!
 
 
 ## Project Structure
 ```plaintext
 GIT-WATCHER
 ├── .github/workflows            # Main github action workflow setup
-│   ├── polling.yml              # yml script to define cron scheduling and tasks for github action
-├── polling.py                   # Python Script for monitoring health of endpoints
-├── app.log                      # Error and events log (to be created when testing the endpoint)
+│   ├── watchdog.yml              # yml script to define cron scheduling and tasks for github action
+├── watchdog.py                   # Python Script for the main task
+├── app.log                      # Error and events log (to be created when first running the script)
 ├── README.md                    # Readme + Details
 ├── requirements.txt             # list of packages being installed to make the python script work
 ```
@@ -62,13 +86,4 @@ GIT-WATCHER
 - **.github/workflows/**: Contain the basic config for cron scheduling setup.
 
 ## Others
-- If new endpoints need to be added, make sure to add them in the **main** section's "endpoints" list.
-    - Be sure to include default input info to be feed in the endpoint to prevent unnecessary errors.
-- Sometimes the cron scheduling on github action workflow may fail with code 500 due to high traffic at the time, to further check or troubleshoot if the issue is from 500 or something else, need to manually run the polling again.
-    - Below is the step to manual run the cron on github
-        - Go to https://github.com/247teach/naomi-polling-api
-        - Click on "Actions" tab and on left side menu, click "Polling Script Scheduler"
-        - There will be a "Run workflow" drop down menu on the right side header
-        - Click the green "Run workflow" button from the drop down
-    **Note**: If there's an error message on slack's "Naomi-test" channel -> this indicate issue with API
-    Otherwise, there should not be any error message on the channel when running -> the API is working fine, the issue encountered previously is indeed due to high traffic flow during the time
+- NA
