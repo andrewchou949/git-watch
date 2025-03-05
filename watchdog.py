@@ -185,7 +185,8 @@ def send_notif(branch):
 
 def run(branch):
     detect_merge(branch)
-    send_notif(branch)
+    detect_notif()
+    #send_notif(branch)
     return   
         
 # main function to run the script
