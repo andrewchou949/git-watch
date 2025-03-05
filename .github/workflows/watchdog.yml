@@ -13,13 +13,14 @@ on:
 
 jobs:
   # define tasks and steps
-  run-polling:
+  run-watchdog:
     runs-on: ubuntu-latest
 
     steps:
     # retrieve code from repository (giving access to yml)
     - name: Checkout code
       uses: actions/checkout@v4
+
     # Restore merge_log.txt from the previous run (if it exists)
     # so the previous log is retained back instead of doing clean state run everytime
     - name: Restore merge_log.txt
@@ -28,6 +29,17 @@ jobs:
       with:
         name: merge-log
         path: .
+
+    # Move merge_log.txt to the root directory so that watchdog.py can detect it
+    - name: Move merge_log.txt to working directory
+      run: |
+        if [ -f "merge-log/merge_log.txt" ]; then
+          mv merge-log/merge_log.txt merge_log.txt
+          echo "merge_log.txt moved to root directory."
+        else
+          echo "merge_log.txt not found in artifact directory!"
+        fi
+        
     # install python with prebuilt setup from github actions
     - name: Set up Python 3.10
       uses: actions/setup-python@v4
