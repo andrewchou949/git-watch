@@ -1,56 +1,30 @@
 name: Watch Dog
 
 on:
-  # cron scheduling on running python script
   schedule:
-    # setup running frequency
-      # minute(0-59) hour(0-23) day-of-month(1-31) month(1-12) day-of-week(0-7)
-      # "*/X" define frequency!
-    - cron: "*/30 * * * *" # set to check once every 30 minute
-
-  # allow manually running on github actions tab
+    - cron: "*/30 * * * *"  # Run every 30 minutes
   workflow_dispatch:
 
 jobs:
-  # define tasks and steps
   run-watchdog:
     runs-on: ubuntu-latest
 
     steps:
-    # retrieve code from repository (giving access to yml)
     - name: Checkout code
       uses: actions/checkout@v4
-
-    # Restore merge_log.txt from the previous run (if it exists)
-    # so the previous log is retained back instead of doing clean state run everytime
-    - name: Restore merge_log.txt
-      continue-on-error: true
-      uses: actions/download-artifact@v4
       with:
-        name: merge-log
-        path: .
+        token: ${{ secrets.NAOMI_GITHUB_TOKEN }}  # Ensure we have push access
 
-    # Move merge_log.txt to the root directory so that watchdog.py can detect it
-    - name: Move merge_log.txt to working directory
-      run: |
-        if [ -f "merge-log/merge_log.txt" ]; then
-          mv merge-log/merge_log.txt merge_log.txt
-          echo "merge_log.txt moved to root directory."
-        else
-          echo "merge_log.txt not found in artifact directory!"
-        fi
-        
-    # install python with prebuilt setup from github actions
     - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    # install dependencies
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    # start running
+
     - name: Run Watch Dog
       env:
         NAOMI_GITHUB_TOKEN: ${{ secrets.NAOMI_GITHUB_TOKEN }}
@@ -58,10 +32,12 @@ jobs:
         SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
       run: python watchdog.py
 
-    # Save merge_log.txt after the script runs
-    - name: Save merge_log.txt
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: merge-log
-        path: merge_log.txt
+    - name: Commit and Push Updated merge_log.txt
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "github-actions@github.com"
+        git add merge_log.txt
+        git commit -m "Update merge_log.txt to track notified PRs" || echo "No changes to commit"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.NAOMI_GITHUB_TOKEN }}
