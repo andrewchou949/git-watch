@@ -2,7 +2,8 @@ name: Watch Dog
 
 on:
   schedule:
-    - cron: "*/30 * * * *"  # Run every 30 minutes
+    - cron: "*/10 15-23 * * *"  # Every 10 minutes from 8AM - 5PM(4:50PM) PT (UTC 15-23)
+    - cron: "0 0-14 * * *"  # Every hour from 5PM - 8AM(7AM) PT (UTC 0-15)
   workflow_dispatch:
 
 jobs:
